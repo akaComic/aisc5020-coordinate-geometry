@@ -36,7 +36,24 @@ python -m coordinate_geometry.verify_part1 --output outputs/part1
 
 ## 2. 统一符号和更新公式
 
-令 $f(w)=\frac{1}{2}w^{T}Hw$，$H=QDQ^{T}$，$Q^{T}Q=I$，$D=\operatorname{diag}(\lambda_i)\succ0$，$\mu=\min_i\lambda_i$，$L=\max_i\lambda_i$，$\kappa=L/\mu$。定义 $z=Q^{T}w$，则 $\phi(z)=\frac{1}{2}z^{T}Dz$，且 $\nabla f(Qz)=QDz$。
+令目标函数、Hessian 分解及谱参数为：
+
+```math
+\begin{aligned}
+f(w) &= \frac{1}{2}w^{T}Hw, \\
+H &= QDQ^{T}, \qquad Q^{T}Q=I, \\
+D &= \operatorname{diag}(\lambda_1,\ldots,\lambda_p)\succ0, \\
+\mu &= \min_i\lambda_i, \qquad L=\max_i\lambda_i, \qquad \kappa=\frac{L}{\mu}.
+\end{aligned}
+```
+
+定义特征坐标后，目标函数与梯度满足：
+
+```math
+z=Q^{T}w, \qquad
+\phi(z)=\frac{1}{2}z^{T}Dz, \qquad
+\nabla f(Qz)=QDz.
+```
 
 GD：$w_{t+1}=w_t-\eta Hw_t$。
 
