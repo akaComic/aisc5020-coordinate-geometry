@@ -36,21 +36,21 @@ python -m coordinate_geometry.verify_part1 --output outputs/part1
 
 ## 2. 统一符号和更新公式
 
-令 $f(w)=\frac12w^{T}Hw$，$H=QDQ^{T}$，$Q^{T}Q=I$，$D=\operatorname{diag}(\lambda_i)\succ0$，$\mu=\min_i\lambda_i$，$L=\max_i\lambda_i$，$\kappa=L/\mu$。定义 $z=Q^{T}w$，则 $\phi(z)=\frac12z^{T}Dz$，且 $\nabla f(Qz)=QDz$。
+令 $f(w)=\frac{1}{2}w^{T}Hw$，$H=QDQ^{T}$，$Q^{T}Q=I$，$D=\operatorname{diag}(\lambda_i)\succ0$，$\mu=\min_i\lambda_i$，$L=\max_i\lambda_i$，$\kappa=L/\mu$。定义 $z=Q^{T}w$，则 $\phi(z)=\frac{1}{2}z^{T}Dz$，且 $\nabla f(Qz)=QDz$。
 
 GD：$w_{t+1}=w_t-\eta Hw_t$。
 
 本项目 heavy-ball 的 velocity 是**累计梯度**：
 
-$$
+```math
 v_{t+1}=\beta v_t+Hw_t,\qquad w_{t+1}=w_t-\eta v_{t+1},\qquad v_0=0.
-$$
+```
 
 它没有 $(1-\beta)$ 因子，也没有 Adam 的 bias correction。消去速度得到
 
-$$
+```math
 w_{t+1}=(1+\beta)w_t-\eta Hw_t-\beta w_{t-1},\qquad w_{-1}=w_0.
-$$
+```
 
 最后这个初始条件决定暂态，不能把 $w_{-1}$ 默认为零。`RunConfig.beta` 是 heavy-ball 参数，和 Adam 的 `beta1` / `beta2` 分开。
 
@@ -62,10 +62,10 @@ GD：若 $w_t=Qz_t$，则 $w_{t+1}=Qz_t-\eta QDz_t=Qz_{t+1}$。
 
 heavy-ball：若 $w_t=Qz_t$、$v_t=Qu_t$，则
 
-$$
+```math
 v_{t+1}=Q(\beta u_t+Dz_t)=Qu_{t+1},\quad
 w_{t+1}=Q(z_t-\eta u_{t+1})=Qz_{t+1}.
-$$
+```
 
 归纳得到每一步都对应，且损失、梯度范数和目标阈值步数在精确算术中相同。结论允许重复特征值，也不依赖收敛；浮点发散对照中误差会随轨迹尺度放大。这个结论针对正交变换和标量参数。
 
@@ -73,19 +73,19 @@ $$
 
 特征坐标独立递推：$z_{t,i}=(1-\eta\lambda_i)^{t}z_{0,i}$。
 
-$$
+```math
 \rho_{GD}=\max_i|1-\eta\lambda_i|,\qquad
 f(w_t)\le\rho_{GD}^{2t}f(w_0).
-$$
+```
 
 对任意初值收敛的充要条件是 $0<\eta<2/L$。在边界 $\eta=2/L$，最高特征方向因子为 $-1$，一般不收敛；特定初值若不含不稳定 / 边界模态则可能仍收敛，不能据单次轨迹反推全局稳定。
 
 固定步长的最坏模态最优参数来自平衡端点：
 
-$$
-\eta^{*}_{GD}=\frac2{L+\mu},\qquad
-\rho^{*}_{GD}=\frac{\kappa-1}{\kappa+1}.
-$$
+```math
+\eta^{\ast}_{GD}=\frac{2}{L+\mu},\qquad
+\rho^{\ast}_{GD}=\frac{\kappa-1}{\kappa+1}.
+```
 
 这是状态因子；目标函数界要平方。$\eta=1/L$ 时状态因子为 $1-1/\kappa$。
 
@@ -93,40 +93,40 @@ $$
 
 每个特征方向满足
 
-$$
+```math
 z_{t+1,i}=(1+\beta-\eta\lambda_i)z_{t,i}-\beta z_{t-1,i},
 \quad r^{2}-(1+\beta-\eta\lambda_i)r+\beta=0.
-$$
+```
 
 对实系数二次多项式 $r^{2}-ar+\beta$，根严格位于单位圆内的条件为 $1-a+\beta>0$、$1+a+\beta>0$、$1-\beta>0$。代入 $a=1+\beta-\eta\lambda$，在项目允许的 $0\le\beta<1$ 内得到
 
-$$
-0<\eta<\frac{2(1+\beta)}L.
-$$
+```math
+0<\eta<\frac{2(1+\beta)}{L}.
+```
 
 边界有根 $-1$，因此不属于严格稳定。程序以严格不等式判断，不用浮点算出的谱半径是否恰好小于 1 判断边界。
 
 在 SPD 二次型上最小化最坏模态的渐近根模，得到
 
-$$
-\eta^{*}_{HB}=\frac4{(\sqrt L+\sqrt\mu)^{2}},\quad
-\beta^{*}_{HB}=\left(\frac{\sqrt L-\sqrt\mu}{\sqrt L+\sqrt\mu}\right)^{2},\quad
-\rho^{*}_{HB}=\frac{\sqrt\kappa-1}{\sqrt\kappa+1}.
-$$
+```math
+\eta^{\ast}_{HB}=\frac{4}{(\sqrt{L}+\sqrt{\mu})^{2}},\quad
+\beta^{\ast}_{HB}=\left(\frac{\sqrt{L}-\sqrt{\mu}}{\sqrt{L}+\sqrt{\mu}}\right)^{2},\quad
+\rho^{\ast}_{HB}=\frac{\sqrt{\kappa}-1}{\sqrt{\kappa}+1}.
+```
 
 英文报告给出最优性的下界证明。端点出现重根，解包含 $(A+Bt)r^{t}$；所以 $\rho_{HB}$ 是渐近状态因子，**不能**声称 $f(w_t)\le\rho_{HB}^{2t}f(w_0)$。例如最高特征方向、零初速度下，最优参数产生 $z_t=[1+(1+\rho)t](-\rho)^{t}z_0$，初期可明显放大。
 
 ## 6. 可手算的二维例子
 
-取 $D=\operatorname{diag}(0.01,1)$，$z_0=(1,1)^{T}$，$Q$ 为 $45^{\circ}$ 旋转，$w_0=Qz_0=(0,\sqrt2)^{T}$。
+取 $D=\operatorname{diag}(0.01,1)$，$z_0=(1,1)^{T}$，$Q$ 为 $45^{\circ}$ 旋转，$w_0=Qz_0=(0,\sqrt{2})^{T}$。
 
-$$
+```math
 H=\begin{pmatrix}0.505&-0.495\\-0.495&0.505\end{pmatrix},\qquad f(w_0)=0.505.
-$$
+```
 
-取 $\eta=1$。GD 和零初速度 heavy-ball 的第一步均为 $z_1=(0.99,0)^{T}$，故 $w_1=(0.99/\sqrt2,0.99/\sqrt2)^{T}$，损失为 $0.0049005$。
+取 $\eta=1$。GD 和零初速度 heavy-ball 的第一步均为 $z_1=(0.99,0)^{T}$，故 $w_1=(0.99/\sqrt{2},0.99/\sqrt{2})^{T}$，损失为 $0.0049005$。
 
-heavy-ball 再取 $\beta=0.5$，第二步为 $z_2=(0.9751,-0.5)^{T}$，$w_2=(1.4751/\sqrt2,0.4751/\sqrt2)^{T}$，损失为 $0.12975410005$。它仍处稳定区，但损失从第一步回升。对应的单元测试验证了这些具体数值。
+heavy-ball 再取 $\beta=0.5$，第二步为 $z_2=(0.9751,-0.5)^{T}$，$w_2=(1.4751/\sqrt{2},0.4751/\sqrt{2})^{T}$，损失为 $0.12975410005$。它仍处稳定区，但损失从第一步回升。对应的单元测试验证了这些具体数值。
 
 ## 7. 已运行的验证结果
 
