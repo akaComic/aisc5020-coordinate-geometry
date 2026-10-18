@@ -14,6 +14,10 @@ from numpy.testing import assert_allclose
 
 
 def verify(output):
+    # Imported callers and the CLI share this entry point. Invalidate prior
+    # success before reading any input so every failed audit leaves no marker.
+    marker = output / "artifact_verification.json"
+    marker.unlink(missing_ok=True)
     settings = json.loads((output / "run_config.json").read_text())
     saved = json.loads((output / "trajectories.json").read_text())
     summary = json.loads((output / "summary.json").read_text())
@@ -132,7 +136,7 @@ def verify(output):
                   max_relative_reconstruction_error=max_reconstruction_error,
                   method="Independent modal position recurrence; seeded regeneration; loss, gradient, stopping and CSV checks",
                   source_hashes_checked=len(summary["source_sha256"]))
-    (output / "artifact_verification.json").write_text(json.dumps(report, indent=2) + "\n")
+    marker.write_text(json.dumps(report, indent=2) + "\n")
     return report
 
 
@@ -140,9 +144,6 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, default=Path("outputs/part1"))
     args = parser.parse_args(argv)
-    # Remove a stale success marker before attempting a new audit.
-    marker = args.output / "artifact_verification.json"
-    marker.unlink(missing_ok=True)
     print(json.dumps(verify(args.output), indent=2))
     return 0
 

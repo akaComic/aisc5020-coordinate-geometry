@@ -42,6 +42,16 @@ def write_csv(path: Path, rows: list[dict[str, object]]) -> None:
         writer.writerows(rows)
 
 
+def _integer_setting(value: object, name: str, *, minimum: int) -> int:
+    """Accept integer scalars without silently changing a discrete protocol."""
+    if isinstance(value, (bool, np.bool_)) or not isinstance(value, (int, np.integer)):
+        raise ValueError(f"{name} must be an integer, excluding booleans")
+    integer = int(value)
+    if integer < minimum:
+        raise ValueError(f"{name} must be an integer greater than or equal to {minimum}")
+    return integer
+
+
 def canonical_gradient_history(
     problem: QuadraticProblem,
     initial: np.ndarray,
@@ -115,8 +125,16 @@ def diagnostic_records(
     if angles.ndim != 1 or angles.size == 0 or not np.all(np.isfinite(angles)):
         raise ValueError("angles_degrees must be a nonempty finite vector")
 
-    max_steps = int(settings["max_steps"])
-    checkpoints = [int(value) for value in settings["checkpoints"]]
+    max_steps = _integer_setting(settings["max_steps"], "max_steps", minimum=1)
+    seed = _integer_setting(settings["seed"], "seed", minimum=0)
+    raw_checkpoints = settings["checkpoints"]
+    if not isinstance(raw_checkpoints, (list, tuple, np.ndarray)) or (
+        isinstance(raw_checkpoints, np.ndarray) and raw_checkpoints.ndim != 1
+    ):
+        raise ValueError("checkpoints must be a nonempty sequence of integers")
+    checkpoints = [
+        _integer_setting(value, "checkpoints", minimum=1) for value in raw_checkpoints
+    ]
     if not checkpoints or len(set(checkpoints)) != len(checkpoints):
         raise ValueError("checkpoints must be nonempty and unique")
     if any(step < 1 or step > max_steps for step in checkpoints):
@@ -131,7 +149,7 @@ def diagnostic_records(
         beta2=float(settings["beta2"]),
         epsilon=float(settings["epsilon"]),
     )
-    rng = np.random.default_rng(int(settings["seed"]))
+    rng = np.random.default_rng(seed)
     canonical, _, initial, _ = matched_pair(
         eigenvalues,
         np.eye(2),
@@ -267,7 +285,7 @@ def main(argv: list[str] | None = None) -> int:
     write_json(args.output / "problem.json", problem_record)
     write_json(args.output / "summary.json", summary)
     if args.plot:
-        plot_diagnostics(rows, [int(value) for value in settings["checkpoints"]], args.output)
+        plot_diagnostics(rows, summary["checkpoints"], args.output)
 
     log_lines = [
         f"UTC output timestamp: {datetime.now(timezone.utc).isoformat()}",

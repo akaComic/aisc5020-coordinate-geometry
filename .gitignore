@@ -17,3 +17,8 @@ Thumbs.db
 work/
 outputs/*
 !outputs/.gitkeep
+docs/*.aux
+docs/*.log
+docs/*.out
+docs/*.synctex.gz
+docs/*_report.pdf

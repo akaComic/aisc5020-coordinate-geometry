@@ -22,12 +22,15 @@ class Part1ArtifactTests(unittest.TestCase):
             report = verify(output)
             self.assertEqual(report["status"], "passed")
             self.assertEqual(report["trajectories"], 56)
+            marker = output / "artifact_verification.json"
+            self.assertEqual(json.loads(marker.read_text())["status"], "passed")
             path = output / "trajectories.json"
             saved = json.loads(path.read_text())
             saved["cases"][0]["runs"][0]["positions"][1][0] += 0.01
             path.write_text(json.dumps(saved))
             with self.assertRaises(AssertionError):
                 verify(output)
+            self.assertFalse(marker.exists(), "a failed imported audit must not retain an old passed marker")
 
 
 if __name__ == "__main__":

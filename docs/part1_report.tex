@@ -199,7 +199,9 @@ The optimal GD parameters are $(\eta,\rho)=(1.980198,0.980198)$; optimal HB
 uses $(\eta,\beta,\rho)=(3.305785,0.669421,0.818182)$.
 Boundary controls use $2/L$ and $2(1+\beta)/L$; unstable controls multiply
 these boundary steps by $1.05$. Stable paired paths have maximum discrepancy
-$\max_t\norm{w_t-Qz_t}/\max(1,\norm{z_0})=6.240\,10^{-15}$.
+\[
+ \max_t\norm{w_t-Qz_t}/\max(1,\norm{z_0})=6.240\,10^{-15}.
+\]
 Including growing unstable controls raises this metric to $6.849\,10^{-9}$;
 the trajectories then have magnitudes around one million. Checks use mixed
 componentwise absolute and relative tolerances $10^{-9}$ after fixed initial
@@ -229,14 +231,18 @@ From the repository root in the project environment, run
 python -m unittest discover -s tests -v
 python -m coordinate_geometry.part1_experiments \
   --config configs/part1.json --output outputs/part1
-python -m coordinate_geometry.verify_part1 --output outputs/part1
+python -m coordinate_geometry.verify_part1 \
+  --output outputs/part1
 \end{verbatim}
-The first experiment command can take \texttt{--no-plots}. Artifacts include
-\path{summary.csv}, \path{trajectories.json}, \path{run_config.json},
-\path{summary.json}, \path{artifact_verification.json}, and
-\path{part1_validation.png}, all under \path{outputs/part1/}.
+The first experiment command can take \texttt{--no-plots}. Artifacts under
+\path{outputs/part1/} include:
+\begin{flushleft}
+\path{summary.csv}, \path{trajectories.json}, \path{run_config.json},\\
+\path{summary.json}, \path{artifact_verification.json}, and\\
+\path{part1_validation.png}.
+\end{flushleft}
 The JSON summary records environment versions, a UTC generation timestamp,
-and source/configuration SHA256 hashes. These identify the local source
+and source/\allowbreak configuration SHA256 hashes. These identify the local source
 snapshot even in an extracted folder without Git metadata. This standalone
 report source has no external figure dependency.
 

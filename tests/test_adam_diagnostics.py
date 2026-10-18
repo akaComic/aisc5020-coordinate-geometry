@@ -83,5 +83,64 @@ class AdamDiagnosticTests(unittest.TestCase):
             diagnostic_records(invalid)
 
 
+    def test_discrete_settings_reject_coercion_and_nonfinite_values(self):
+        invalid_values = (
+            True, False, np.bool_(True), 1.9, 4.0, np.float64(2.0),
+            float("nan"), float("inf"), float("-inf"), "4", None,
+        )
+        for field in ("max_steps", "seed", "checkpoints"):
+            for value in invalid_values:
+                with self.subTest(field=field, value=value):
+                    replacement = [value] if field == "checkpoints" else value
+                    invalid = dict(self.settings, **{field: replacement})
+                    with self.assertRaisesRegex(ValueError, field):
+                        diagnostic_records(invalid)
+
+    def test_discrete_settings_enforce_ranges_and_unique_checkpoints(self):
+        invalid_settings = (
+            ("max_steps", 0), ("max_steps", -1), ("max_steps", np.int64(-4)),
+            ("seed", -1), ("seed", np.int64(-1)),
+            ("checkpoints", []), ("checkpoints", [1, 1]),
+            ("checkpoints", [0, 4]), ("checkpoints", [-1, 4]),
+            ("checkpoints", [1, 5]), ("checkpoints", None),
+            ("checkpoints", 4), ("checkpoints", "14"),
+            ("checkpoints", {1: True}), ("checkpoints", np.array(1)),
+            ("checkpoints", np.array([[1, 4]])),
+        )
+        for field, value in invalid_settings:
+            with self.subTest(field=field, value=value):
+                with self.assertRaisesRegex(ValueError, field):
+                    diagnostic_records(dict(self.settings, **{field: value}))
+
+    def test_numpy_integer_settings_preserve_the_same_experiment(self):
+        expected = diagnostic_records(self.settings)
+        actual = diagnostic_records(dict(
+            self.settings,
+            max_steps=np.int64(4), seed=np.uint64(22),
+            checkpoints=np.array([1, 2, 4], dtype=np.int32),
+        ))
+        self.assertEqual(actual, expected)
+        self.assertIs(type(actual[2]["gd_config"]["max_steps"]), int)
+        self.assertTrue(all(type(value) is int for value in actual[2]["checkpoints"]))
+
+    def test_zero_and_large_integer_seeds_remain_supported(self):
+        for seed in (0, np.uint64(0), 2**128 + 123):
+            with self.subTest(seed=seed):
+                rows, problem, _ = diagnostic_records(dict(self.settings, seed=seed))
+                self.assertEqual(len(rows), 8)
+                self.assertTrue(np.all(np.isfinite(problem["canonical_initial"])))
+
+    def test_entrypoint_rejects_fractional_protocol_before_writing_outputs(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            config, output = root / "config.json", root / "output"
+            for field, value in (("max_steps", 4.9), ("checkpoints", [1.9, 4.2]), ("seed", 22.9)):
+                with self.subTest(field=field):
+                    config.write_text(json.dumps(dict(self.settings, **{field: value})), encoding="utf-8")
+                    with self.assertRaisesRegex(ValueError, field):
+                        main(["--config", str(config), "--output", str(output)])
+                    self.assertFalse(output.exists())
+
+
 if __name__ == "__main__":
     unittest.main()
