@@ -42,7 +42,7 @@ python -m coordinate_geometry.verify_part1 --output outputs/part1
 \begin{aligned}
 f(w) &= \frac{1}{2}w^{T}Hw, \\
 H &= QDQ^{T}, \qquad Q^{T}Q=I, \\
-D &= \operatorname{diag}(\lambda_1,\ldots,\lambda_p)\succ0, \\
+D &= \mathrm{diag}(\lambda_1,\ldots,\lambda_p)\succ0, \\
 \mu &= \min_i\lambda_i, \qquad L=\max_i\lambda_i, \qquad \kappa=\frac{L}{\mu}.
 \end{aligned}
 ```
@@ -135,7 +135,7 @@ z_{t+1,i}=(1+\beta-\eta\lambda_i)z_{t,i}-\beta z_{t-1,i},
 
 ## 6. 可手算的二维例子
 
-取 $D=\operatorname{diag}(0.01,1)$，$z_0=(1,1)^{T}$，$Q$ 为 $45^{\circ}$ 旋转，$w_0=Qz_0=(0,\sqrt{2})^{T}$。
+取 $D=\mathrm{diag}(0.01,1)$，$z_0=(1,1)^{T}$，$Q$ 为 $45^{\circ}$ 旋转，$w_0=Qz_0=(0,\sqrt{2})^{T}$。
 
 ```math
 H=\begin{pmatrix}0.505&-0.495\\-0.495&0.505\end{pmatrix},\qquad f(w_0)=0.505.
