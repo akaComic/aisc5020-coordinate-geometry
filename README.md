@@ -99,6 +99,20 @@ print(result.status, result.first_attainment)
 - 预条件与特征坐标方法说明额外信息和计算成本，不只比较更新步数。
 - 课程报告中的贡献说明以实际提交和完成的工作为准。
 
+## 第 1 部分：GD / heavy-ball 理论基线
+
+完整推导、二维手算、实测结果与模块交接见 [第一部分中文指南](docs/part1_guide.md)，英文报告见 [LaTeX 源文件](docs/part1_report.tex)。使用已激活的项目环境，在仓库根目录执行：
+
+```bash
+python -m unittest discover -s tests -v
+python -m coordinate_geometry.part1_experiments --config configs/part1.json --output outputs/part1
+python -m coordinate_geometry.verify_part1 --output outputs/part1
+```
+
+实验覆盖 7 组理论参数 / 稳定边界 / 发散对照和 4 个旋转角度，保存 56 条完整轨迹、参数、状态、阈值记录、源码哈希与图表。独立复核程序使用特征方向的二阶位置递推重建结果。只需数值输出时，在实验命令末尾加 `--no-plots`。输出写入 `outputs/part1/`，再次运行会更新同目录结果。
+
+这些结果用于验证旋转对应性、GD 收敛界和 heavy-ball 稳定性，不是全组主实验。heavy-ball 的谱半径是渐近状态因子，重根暂态可以使损失先增大；不能将其直接当作每步目标函数收缩界。
+
 ## 第 5 部分：特征坐标 Adam
 
 本模块的学习与交接说明在 [part5_guide.md](docs/part5_guide.md)，英文理论、证明与解释在 [part5_report.tex](docs/part5_report.tex)。实现支持生成基 `oracle`、仅从 Hessian 恢复的 `eigh` 基，以及验证后的 `supplied` 基；固定基在优化开始前准备，可显式复用。
