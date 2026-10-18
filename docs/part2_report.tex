@@ -1,0 +1,248 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=25mm]{geometry}
+\usepackage{amsmath,amssymb,amsthm,booktabs}
+\usepackage[hidelinks]{hyperref}
+\newtheorem{proposition}{Proposition}
+\newtheorem{lemma}{Lemma}
+\newcommand{\norm}[1]{\left\lVert#1\right\rVert}
+\title{Adam under Orthogonal Coordinate Changes\\
+\large Module 2: A Positive-Epsilon Counterexample and Fixed-Gradient Replay}
+\author{AISC5020 Project Team\\Module 2}
+\date{18 October 2026}
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We examine how Adam's coordinatewise moment normalization responds to
+orthogonal changes of coordinates. A one-step counterexample establishes
+failure of general rotation equivariance for every finite positive scalar
+epsilon, without replacing the implemented update by a zero-epsilon limit.
+Signed permutations remain an exact special case. We then distinguish a
+fixed-gradient replay diagnostic from a full optimization trajectory: the
+former holds the input history fixed up to rotation, whereas the latter
+includes feedback from diverging parameter positions. A reproduced
+two-dimensional diagnostic contains 350 rows over seven angles and 50 updates.
+It tests the mechanism, not optimizer rankings or convergence rates.
+\end{abstract}
+
+\section{Problem and update convention}
+Let $D$ be positive diagonal and $Q$ orthogonal. The paired problems are
+\[
+ f(x)=\tfrac12x^\top Dx,\qquad
+ \widetilde f(y)=\tfrac12y^\top(QDQ^\top)y,\qquad y_0=Qx_0.
+\]
+They have the same eigenvalues, spectral condition number, minimum value,
+and corresponding objective geometry. This does not imply that every
+optimization algorithm produces corresponding trajectories.
+
+We use bias-corrected Adam~\cite{adam}, with zero initial moments and a scalar
+$\epsilon>0$ outside the square root. At update $t$, the gradient is evaluated
+before moving, $g_t=\nabla f(x_{t-1})$, and
+\begin{align}
+ m_t&=\beta_1m_{t-1}+(1-\beta_1)g_t,
+ &v_t&=\beta_2v_{t-1}+(1-\beta_2)(g_t\odot g_t),\label{eq:moments}\\
+ \widehat m_t&=\frac{m_t}{1-\beta_1^t},
+ &\widehat v_t&=\frac{v_t}{1-\beta_2^t},\\
+ A_t&=\frac{\widehat m_t}{\sqrt{\widehat v_t}+\epsilon\mathbf1},
+ &x_t&=x_{t-1}-\eta A_t.\label{eq:direction}
+\end{align}
+Here $\beta_1,\beta_2\in[0,1)$ and $\eta>0$. Squares, square roots and
+quotients of vectors are componentwise. The direction $A_t$ has not yet been
+multiplied by the learning rate. In code, \texttt{adam\_direction} updates the
+moments and time counter and returns one direction vector;
+\texttt{adam\_step} additionally moves the parameter position.
+
+For a supplied gradient history, write $A_t=A(g_1,\ldots,g_t)$.
+Rotation equivariance would require
+\begin{equation}
+ A(Qg_1,\ldots,Qg_t)=QA(g_1,\ldots,g_t)
+ \label{eq:equivariance}
+\end{equation}
+for every history and orthogonal $Q$, using the same scalar parameters.
+The following example disproves that general statement.
+
+\section{A hand-checkable counterexample with positive epsilon}
+\begin{proposition}[P3: general rotation equivariance fails]
+For every finite $\epsilon>0$ and $\beta_1,\beta_2\in[0,1)$, there is a
+positive-definite quadratic and a paired orthogonal rotation for which
+Adam's first directions fail \eqref{eq:equivariance}.
+\end{proposition}
+\begin{proof}
+Take $D=\operatorname{diag}(1,2)$, $x_0=(1,0)^\top$, and let $Q$ rotate
+through $\pi/4$. Write $a=1/\sqrt2$. The initial gradient and its rotated
+counterpart are $g_1=(1,0)^\top$ and $Qg_1=(a,a)^\top$.
+Starting from zero moments, bias correction gives
+$\widehat m_1=g_1$ and $\widehat v_1=g_1\odot g_1$, independently of the
+two moment coefficients. Therefore
+\[
+ A(Qg_1)=\frac{(a,a)^\top}{a+\epsilon},\qquad
+ QA(g_1)=\frac{(a,a)^\top}{1+\epsilon}.
+\]
+The denominators differ for every finite positive $\epsilon$. More explicitly,
+\begin{equation}
+ \norm{A(Qg_1)-QA(g_1)}_2
+ =\frac1{a+\epsilon}-\frac1{1+\epsilon}
+ =\frac{1-a}{(a+\epsilon)(1+\epsilon)}>0.
+ \label{eq:counterexample}
+\end{equation}
+Both problems have corresponding initial gradients, so the first parameter
+discrepancy is $\eta$ times this nonzero direction discrepancy.
+\end{proof}
+
+For $\epsilon=10^{-8}$, the absolute direction discrepancy in
+\eqref{eq:counterexample} is approximately $0.414214$.
+This is a separate analytical example, not an extra sample in the
+350-row experiment below. It establishes existence of a failure; it does
+not claim that every rotation or every initial point causes a discrepancy.
+
+\begin{lemma}[Signed permutations remain equivariant]
+If $S$ is a signed permutation matrix, $P=|S|$ its unsigned permutation,
+and the two supplied histories satisfy $g'_t=Sg_t$, then Adam with zero
+initial moments and shared scalar parameters satisfies
+$m'_t=Sm_t$, $v'_t=Pv_t$, and $A'_t=SA_t$ in exact arithmetic.
+\end{lemma}
+\begin{proof}
+The claims hold at initialization. The first-moment update is linear, and
+$(Sg)\odot(Sg)=P(g\odot g)$, so induction proves the two moment identities.
+Scalar bias correction preserves them. Since $P\mathbf1=\mathbf1$ and
+$\sqrt{Pv}=P\sqrt v$, the denominator is permuted without signs while the
+numerator has the appropriate signs. Componentwise division therefore gives
+$A'_t=SA_t$.
+\end{proof}
+For paired quadratic problems, this direction identity and induction on
+positions also imply $y_t=Sx_t$. The identity and a $90^\circ$ rotation in
+two dimensions are such controls. Notice that second moments use $P$, not
+$S$: directly asserting $v'_t=Sv_t$ would be incorrect. The lemma also does
+not extend to arbitrary rotations within a repeated eigenspace. Module 5
+addresses Adam in a specified fixed eigenbasis under separate assumptions.
+
+\section{Two diagnostics with different meanings}
+\subsection{Fixed-gradient replay}
+We first generate one canonical GD gradient history, with its own learning
+rate $\alpha$:
+\[
+ g_t=Dx_{t-1}^{\rm GD},\qquad
+ x_t^{\rm GD}=x_{t-1}^{\rm GD}-\alpha g_t,
+ \qquad
+ g_t=D(I-\alpha D)^{t-1}x_0.
+\]
+GD commutes with orthogonal rotation, so rotating this history gives the
+corresponding history $Qg_t$ without another optimization run. If gradients
+are stored as rows of a matrix $G$, the rotated row history is $GQ^\top$,
+because $(Qg_t)^\top=g_t^\top Q^\top$.
+
+\texttt{replay\_directions} creates a fresh zero moment state and processes
+the supplied gradients sequentially. It returns a $T\times p$ direction
+matrix, without moving parameters or generating new gradients. Rotation is
+performed by the matrix multiplication before this function is called.
+Two independent replays yield $A_t$ and $A'_t$, and we report
+\begin{equation}
+ n_t=\norm{A'_t-QA_t}_2,\qquad
+ b_t=\norm{A_t}_2,\qquad
+ \delta_t=\frac{n_t}{b_t+10^{-12}}.
+ \label{eq:defect}
+\end{equation}
+The $10^{-12}$ term protects this diagnostic denominator; it is distinct
+from Adam's optimizer epsilon. The normalized direction defect is neither
+a loss difference nor a convergence rate. Positive epsilon and this
+protection term also prevent an unconditional claim of scale invariance.
+
+\subsection{Actual Adam trajectories}
+We separately run ordinary Adam on both paired quadratics. Each run computes
+new gradients at its actual positions. The stored paths contain the initial
+point and all updated positions, giving $T+1$ rows; a gradient history instead
+has $T$ rows and begins with the gradient at the initial point.
+The position discrepancy is
+\begin{equation}
+ e_t=\frac{\norm{y_t-Qx_t}_2}{\max(1,\norm{x_0}_2)}.
+ \label{eq:position}
+\end{equation}
+Once the paths separate, later gradients need not correspond. This diagnostic
+therefore includes feedback from parameter movement, whereas replay isolates
+the update response to histories that are exactly paired by construction.
+Neither metric alone ranks the quality of the final optimized solutions.
+
+\section{Reproduced module diagnostic}
+The default configuration uses seed 502002,
+$D=\operatorname{diag}(0.1,1)$, initial objective 1,
+$\alpha=0.5$, $\eta=0.1$, $(\beta_1,\beta_2)=(0.9,0.999)$,
+$\epsilon=10^{-8}$, and 50 updates. Seven angles from $0^\circ$ to
+$90^\circ$ in $15^\circ$ increments give 350 diagnostic rows. Checkpoints
+are updates 1, 2, 10 and 50. The canonical initial point is approximately
+$(3.85243548,0.71824375)^\top$ and is shared across all angles through
+rotation. Reproduction used Python 3.12.14 and NumPy 2.5.4.
+
+\begin{table}[htbp]
+\centering
+\caption{Observed direction and position discrepancies. Maxima are over
+50 updates; the final position column is at update 50.}
+\label{tab:results}
+\begin{tabular}{rrrr}
+\toprule
+Angle & Maximum $\delta_t$ & Maximum $e_t$ & Final $e_t$\\
+\midrule
+$0^\circ$  & 0 & 0 & 0\\
+$15^\circ$ & 0.261052 & 0.128376 & 0.0731763\\
+$30^\circ$ & 0.9999997 & 0.173925 & 0.104984\\
+$45^\circ$ & 0.765367 & 0.112466 & 0.0237806\\
+$60^\circ$ & 0.517638 & 0.111343 & 0.0400905\\
+$75^\circ$ & 0.261052 & 0.0737234 & 0.0424682\\
+$90^\circ$ & $2.174\,10^{-16}$ & $1.417\,10^{-17}$ & 0\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The identity control is exactly zero; the $90^\circ$ control agrees to
+floating-point precision. Intermediate rotations give nonzero replay and
+position discrepancies in this fixed experiment. Their magnitudes need not
+increase monotonically with angle: they depend on the history's coordinate
+components, not just the geometric angle. In particular, the largest replay
+defect in this run occurs at $30^\circ$, not $45^\circ$.
+
+A separate local audit reconstructed Adam moments from explicit weighted
+gradient sums and independently reconstructed the actual position updates.
+It checked five numerical metrics per row, 1,750 scalar comparisons in total;
+the largest absolute difference was $1.2213\times10^{-15}$. This corroborates
+the default diagnostic's numbers. It is not a convergence proof, an
+independent statistical replication, or evidence that all possible
+configurations have been validated.
+
+The scope is intentionally limited: one spectrum, one initialization, one
+step-size choice and a short fixed horizon. The seven angles share an input
+history, so they are not seven independent random trials. No tuning, success
+rate estimate, uncertainty interval or wall-clock superiority is inferred.
+The recorded protocol is not the frozen team main-study protocol.
+
+\section{Reproduction and integration}
+From the repository root in the installed project environment, run
+\begin{verbatim}
+python -m unittest discover -s tests -p test_adam_diagnostics.py -v
+python -m coordinate_geometry.adam_diagnostics \
+  --config configs/adam_diagnostics.json \
+  --output outputs/adam_diagnostics
+\end{verbatim}
+Adding \texttt{--plot} generates the figure and requires the optional plot
+dependencies. Artifacts include \path{diagnostics.csv}, \path{problem.json},
+\path{run_config.json}, \path{summary.json}, and \path{run.log} in the selected
+output directory. Rerunning overwrites that directory's corresponding files;
+choose a new directory when preserving an earlier run.
+
+The group can extract the theory, method and appropriately scoped results
+from this standalone note for its final report. Module 2 contributes a
+positive-epsilon counterexample, exact signed-permutation controls, and a
+diagnostic separating fixed-input normalization from trajectory feedback.
+The group must still agree on parameter budgets, spectral and initialization
+sampling, and statistical analysis before drawing its main experimental
+conclusions. In particular, recovering correspondence in a common eigenbasis
+does not make ordinary ambient-coordinate Adam generally rotation equivariant.
+
+\begin{thebibliography}{1}
+\bibitem{adam}
+D. P. Kingma and J. Ba.
+\newblock Adam: A Method for Stochastic Optimization.
+\newblock \emph{International Conference on Learning Representations}, 2015.
+\newblock \url{https://arxiv.org/abs/1412.6980}.
+\end{thebibliography}
+\end{document}

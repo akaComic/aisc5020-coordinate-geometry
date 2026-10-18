@@ -1,0 +1,11 @@
+{
+  "study_status": "part1_theory_validation",
+  "seed": 5020,
+  "eigenvalues": [0.01, 1.0],
+  "angles_degrees": [0, 30, 45, 90],
+  "max_steps": 300,
+  "tolerance": 1e-6,
+  "explosive_threshold": 1e12,
+  "verification_atol": 1e-9,
+  "verification_rtol": 1e-9
+}

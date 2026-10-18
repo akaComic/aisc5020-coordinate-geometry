@@ -6,7 +6,7 @@
 
 AISC5020 小组项目：在固定 Hessian 特征值的条件下，研究坐标旋转如何影响 GD、heavy-ball momentum、Adam 和预条件方法。
 
-这个仓库包含统一的问题与运行接口、联调用 smoke，以及第 5 部分的特征坐标 Adam 实现与独立验证。**smoke 输出仅用于检查代码连接；第 5 部分验证也不是全组调参后的主实验结果。** 其他模块的完整研究结论要等各负责人复核推导、完成 pilot 和主实验后再写入报告。
+这个仓库包含统一的问题与运行接口、联调用 smoke、第 1 部分 GD / heavy-ball 理论验证、第 2 部分 Adam 坐标依赖诊断，以及第 5 部分特征坐标 Adam 实现与独立验证。**这些模块验证不是全组调参后的主实验结果。** 完整研究结论要等各负责人复核推导、完成 pilot 和主实验后再写入报告。
 
 ## 分工
 
@@ -41,6 +41,39 @@ AISC5020 小组项目：在固定 Hessian 特征值的条件下，研究坐标�
 macOS / Linux 可以运行 `python -m venv work/.venv`，再执行 `work/.venv/bin/python -m pip install -e .`；上方命令中的 Python 路径替换为 `work/.venv/bin/python`。已激活项目环境时，也可以直接使用 `python`。
 
 本地输出保存在 `outputs/`。执行成功说明基础流程能运行；不能据此声称某个方法更好或主实验已经完成。提交实验分析时，应附运行命令、配置、seed、代码版本和输出说明。
+
+合并后的第 1、2、5 部分可以一次检查：
+
+```powershell
+.\scripts\verify_all.ps1 -NoPlots
+```
+
+该命令运行全部测试、smoke 和三个模块的默认实验，并独立重建第 1、5 部分的保存轨迹。需要同时生成图表时，先安装 `.\work\.venv\Scripts\python.exe -m pip install -e '.[plots]'`，然后去掉 `-NoPlots`。GitHub Actions 在 Python 3.10 和 3.12 上执行相同的数值检查。报告的 `.tex` 源文件保留在 `docs/`；编译 PDF 和中间文件放在 `outputs/` 或 `work/`。
+
+安装提供 `pdflatex` 的 MiKTeX 或 TeX Live 后，可运行 `.\scripts\build_reports.ps1`，双次编译第 1、2、5 部分报告到 `outputs/reports/`；脚本会检查未解析引用及内容溢出。
+
+## 第 2 部分：Adam 坐标依赖诊断
+
+第 2 部分使用固定的 canonical GD 梯度历史，将它及其旋转版本分别送入从零开始的
+Adam moment accumulators。这样得到的 replay defect 隔离了逐坐标归一化本身，不会混入
+Adam 轨迹已经分叉后的梯度差异。诊断还记录普通 Adam 在匹配初始点下的逐步位置对应误差。
+
+运行数值诊断：
+
+```powershell
+.\scripts\adam_diagnostics.ps1
+```
+
+需要生成 `defect_versus_angle.png` 时，先安装绘图依赖，再运行：
+
+```powershell
+.\work\.venv\Scripts\python.exe -m pip install -e '.[plots]'
+.\scripts\adam_diagnostics.ps1 -Plot
+```
+
+配置保存在 `configs/adam_diagnostics.json`，结果写入 `outputs/adam_diagnostics/`，包括每个
+角度和步数的 numerator、denominator、relative defect、普通 Adam 位置误差、运行配置和
+汇总信息。这是机制诊断，不是收敛界、调参结果或优化器优劣排名。
 
 ## 统一接口
 
@@ -98,6 +131,30 @@ print(result.status, result.first_attainment)
 - 未达到阈值、数值失败和正常结束分别记录；比较时报告失败与截断情况。
 - 预条件与特征坐标方法说明额外信息和计算成本，不只比较更新步数。
 - 课程报告中的贡献说明以实际提交和完成的工作为准。
+
+## 第 1 部分：GD / heavy-ball 理论基线
+
+完整推导、二维手算、实测结果与模块交接见 [第一部分中文指南](docs/part1_guide.md)，英文报告见 [LaTeX 源文件](docs/part1_report.tex)。使用已激活的项目环境，在仓库根目录执行：
+
+```bash
+python -m unittest discover -s tests -v
+python -m coordinate_geometry.part1_experiments --config configs/part1.json --output outputs/part1
+python -m coordinate_geometry.verify_part1 --output outputs/part1
+```
+
+实验覆盖 7 组理论参数 / 稳定边界 / 发散对照和 4 个旋转角度，保存 56 条完整轨迹、参数、状态、阈值记录、源码哈希与图表。独立复核程序使用特征方向的二阶位置递推重建结果。只需数值输出时，在实验命令末尾加 `--no-plots`。输出写入 `outputs/part1/`，再次运行会更新同目录结果。
+
+这些结果用于验证旋转对应性、GD 收敛界和 heavy-ball 稳定性，不是全组主实验。heavy-ball 的谱半径是渐近状态因子，重根暂态可以使损失先增大；不能将其直接当作每步目标函数收缩界。
+
+## 第 2 部分：Adam 坐标依赖诊断
+
+实现与读代码说明见 [中文指南](docs/part2_guide.md) 和 [梯度回放说明](docs/adam_replay_comparison.md)；公式、正 epsilon 反例、符号排列对应性和英文方法段落见 [LaTeX 报告](docs/part2_report.tex)。
+
+```text
+python -m coordinate_geometry.adam_diagnostics --config configs/adam_diagnostics.json --output outputs/adam_diagnostics
+```
+
+默认在 7 个旋转角度各运行 50 步，保存 350 行诊断。梯度回放使用同一段 canonical GD 梯度历史，隔离 Adam 逐坐标归一化的影响；另行记录普通 Adam 实际轨迹的对应误差。两者含义不同，均不能直接解释为收敛界或优化器排名。`max_steps`、`seed`、`checkpoints` 必须使用整数，不能用小数或字符串代替。需要图表时添加 `--plot`。
 
 ## 第 5 部分：特征坐标 Adam
 
