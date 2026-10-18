@@ -36,7 +36,7 @@ python -m coordinate_geometry.verify_part1 --output outputs/part1
 
 ## 2. 统一符号和更新公式
 
-令 $f(w)=\frac12w^THw$，$H=QDQ^T$，$Q^TQ=I$，$D=\operatorname{diag}(\lambda_i)\succ0$，$\mu=\min_i\lambda_i$，$L=\max_i\lambda_i$，$\kappa=L/\mu$。定义 $z=Q^Tw$，则 $\phi(z)=\frac12z^TDz$，且 $\nabla f(Qz)=QDz$。
+令 $f(w)=\frac12w^{T}Hw$，$H=QDQ^{T}$，$Q^{T}Q=I$，$D=\operatorname{diag}(\lambda_i)\succ0$，$\mu=\min_i\lambda_i$，$L=\max_i\lambda_i$，$\kappa=L/\mu$。定义 $z=Q^{T}w$，则 $\phi(z)=\frac12z^{T}Dz$，且 $\nabla f(Qz)=QDz$。
 
 GD：$w_{t+1}=w_t-\eta Hw_t$。
 
@@ -71,7 +71,7 @@ $$
 
 ## 4. GD 收敛率
 
-特征坐标独立递推：$z_{t,i}=(1-\eta\lambda_i)^tz_{0,i}$。
+特征坐标独立递推：$z_{t,i}=(1-\eta\lambda_i)^{t}z_{0,i}$。
 
 $$
 \rho_{GD}=\max_i|1-\eta\lambda_i|,\qquad
@@ -83,8 +83,8 @@ $$
 固定步长的最坏模态最优参数来自平衡端点：
 
 $$
-\eta^*_{GD}=\frac2{L+\mu},\qquad
-\rho^*_{GD}=\frac{\kappa-1}{\kappa+1}.
+\eta^{*}_{GD}=\frac2{L+\mu},\qquad
+\rho^{*}_{GD}=\frac{\kappa-1}{\kappa+1}.
 $$
 
 这是状态因子；目标函数界要平方。$\eta=1/L$ 时状态因子为 $1-1/\kappa$。
@@ -95,10 +95,10 @@ $$
 
 $$
 z_{t+1,i}=(1+\beta-\eta\lambda_i)z_{t,i}-\beta z_{t-1,i},
-\quad r^2-(1+\beta-\eta\lambda_i)r+\beta=0.
+\quad r^{2}-(1+\beta-\eta\lambda_i)r+\beta=0.
 $$
 
-对实系数二次多项式 $r^2-ar+\beta$，根严格位于单位圆内的条件为 $1-a+\beta>0$、$1+a+\beta>0$、$1-\beta>0$。代入 $a=1+\beta-\eta\lambda$，在项目允许的 $0\le\beta<1$ 内得到
+对实系数二次多项式 $r^{2}-ar+\beta$，根严格位于单位圆内的条件为 $1-a+\beta>0$、$1+a+\beta>0$、$1-\beta>0$。代入 $a=1+\beta-\eta\lambda$，在项目允许的 $0\le\beta<1$ 内得到
 
 $$
 0<\eta<\frac{2(1+\beta)}L.
@@ -109,24 +109,24 @@ $$
 在 SPD 二次型上最小化最坏模态的渐近根模，得到
 
 $$
-\eta^*_{HB}=\frac4{(\sqrt L+\sqrt\mu)^2},\quad
-\beta^*_{HB}=\left(\frac{\sqrt L-\sqrt\mu}{\sqrt L+\sqrt\mu}\right)^2,\quad
-\rho^*_{HB}=\frac{\sqrt\kappa-1}{\sqrt\kappa+1}.
+\eta^{*}_{HB}=\frac4{(\sqrt L+\sqrt\mu)^{2}},\quad
+\beta^{*}_{HB}=\left(\frac{\sqrt L-\sqrt\mu}{\sqrt L+\sqrt\mu}\right)^{2},\quad
+\rho^{*}_{HB}=\frac{\sqrt\kappa-1}{\sqrt\kappa+1}.
 $$
 
-英文报告给出最优性的下界证明。端点出现重根，解包含 $(A+Bt)r^t$；所以 $\rho_{HB}$ 是渐近状态因子，**不能**声称 $f(w_t)\le\rho_{HB}^{2t}f(w_0)$。例如最高特征方向、零初速度下，最优参数产生 $z_t=[1+(1+\rho)t](-\rho)^tz_0$，初期可明显放大。
+英文报告给出最优性的下界证明。端点出现重根，解包含 $(A+Bt)r^{t}$；所以 $\rho_{HB}$ 是渐近状态因子，**不能**声称 $f(w_t)\le\rho_{HB}^{2t}f(w_0)$。例如最高特征方向、零初速度下，最优参数产生 $z_t=[1+(1+\rho)t](-\rho)^{t}z_0$，初期可明显放大。
 
 ## 6. 可手算的二维例子
 
-取 $D=\operatorname{diag}(0.01,1)$，$z_0=(1,1)^T$，$Q$ 为 $45^\circ$ 旋转，$w_0=Qz_0=(0,\sqrt2)^T$。
+取 $D=\operatorname{diag}(0.01,1)$，$z_0=(1,1)^{T}$，$Q$ 为 $45^{\circ}$ 旋转，$w_0=Qz_0=(0,\sqrt2)^{T}$。
 
 $$
 H=\begin{pmatrix}0.505&-0.495\\-0.495&0.505\end{pmatrix},\qquad f(w_0)=0.505.
 $$
 
-取 $\eta=1$。GD 和零初速度 heavy-ball 的第一步均为 $z_1=(0.99,0)^T$，故 $w_1=(0.99/\sqrt2,0.99/\sqrt2)^T$，损失为 $0.0049005$。
+取 $\eta=1$。GD 和零初速度 heavy-ball 的第一步均为 $z_1=(0.99,0)^{T}$，故 $w_1=(0.99/\sqrt2,0.99/\sqrt2)^{T}$，损失为 $0.0049005$。
 
-heavy-ball 再取 $\beta=0.5$，第二步为 $z_2=(0.9751,-0.5)^T$，$w_2=(1.4751/\sqrt2,0.4751/\sqrt2)^T$，损失为 $0.12975410005$。它仍处稳定区，但损失从第一步回升。对应的单元测试验证了这些具体数值。
+heavy-ball 再取 $\beta=0.5$，第二步为 $z_2=(0.9751,-0.5)^{T}$，$w_2=(1.4751/\sqrt2,0.4751/\sqrt2)^{T}$，损失为 $0.12975410005$。它仍处稳定区，但损失从第一步回升。对应的单元测试验证了这些具体数值。
 
 ## 7. 已运行的验证结果
 
